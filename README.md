@@ -1,7 +1,7 @@
 heap_6
 ======
 
-An extension of heap_5.c which allows for heap visualization (helps determine if it's fragementing) and efficient reallocation.
+An extension of heap_5.c which allows for heap visualization (helps determine if it's fragementing), efficient reallocation, and overrun sentinels
 
 Requirements
 ============
