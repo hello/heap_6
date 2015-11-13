@@ -154,7 +154,7 @@ static size_t xBlockAllocatedBit = 0;
 
 /*-----------------------------------------------------------*/
 void pvPortHeapViz( char * c, int n ) {
-	int i,blocksz = heapADJUSTED_HEAP_SIZE / (n-1);
+	long i,blocksz = heapADJUSTED_HEAP_SIZE / (n-1);
 	vTaskSuspendAll();
 	BlockLink_t * pxBlock = xStart.pxNextFreeBlock;
 	while(  ( pxBlock->pxNextFreeBlock != NULL ) )
@@ -239,7 +239,7 @@ BlockLink_t *pxLink, *pxNewBlockLink;
 			return pv;
 		} else {
 			//make sure it's not too much...
-			if( puc + xWantedSize > pxEnd ) {
+			if( puc + xWantedSize > (uint8_t*)pxEnd ) {
 				( void ) xTaskResumeAll();
 				return NULL;
 			}
@@ -247,14 +247,14 @@ BlockLink_t *pxLink, *pxNewBlockLink;
 			size_t diff = xWantedSize - original_size;
 
 			//increasing size...
-			pxNewBlockLink = (puc+B(pxLink->xBlockSize));
+			pxNewBlockLink = (BlockLink_t*)(puc+B(pxLink->xBlockSize));
 			if( !(pxNewBlockLink->xBlockSize&xBlockAllocatedBit)
 					&& xWantedSize<B(pxLink->xBlockSize)+B(pxNewBlockLink->xBlockSize) ) //see if we can grab the next block...
 			{
 				/*  Walk the free list to find the previous link so we can remove the next block from the list */
 				BlockLink_t * pxPreviousBlock = &xStart;
 				BlockLink_t * pxBlock = xStart.pxNextFreeBlock;
-				BlockLink_t * pxDest = (puc+xWantedSize);
+				BlockLink_t * pxDest = (BlockLink_t*)(puc+xWantedSize);
 
 				while( ( pxBlock !=  pxNewBlockLink) && ( pxBlock->pxNextFreeBlock != NULL ) )
 				{
@@ -513,7 +513,7 @@ BlockLink_t *pxFirstFreeBlockInRegion = NULL, *pxPreviousFreeBlock;
 uint8_t *pucAlignedHeap;
 size_t xTotalRegionSize, xTotalHeapSize = 0;
 BaseType_t xDefinedRegions = 0;
-uint32_t ulAddress;
+size_t ulAddress;
 const HeapRegion_t *pxHeapRegion;
 
 	/* Can only call once! */
@@ -526,17 +526,17 @@ const HeapRegion_t *pxHeapRegion;
 		xTotalRegionSize = pxHeapRegion->xSizeInBytes;
 
 		/* Ensure the heap region starts on a correctly aligned boundary. */
-		ulAddress = ( uint32_t ) pxHeapRegion->pucStartAddress;
+		ulAddress = ( size_t ) pxHeapRegion->pucStartAddress;
 		if( ( ulAddress & portBYTE_ALIGNMENT_MASK ) != 0 )
 		{
 			ulAddress += ( portBYTE_ALIGNMENT - 1 );
 			ulAddress &= ~portBYTE_ALIGNMENT_MASK;
 
 			/* Adjust the size for the bytes lost to alignment. */
-			xTotalRegionSize -= ulAddress - ( uint32_t ) pxHeapRegion->pucStartAddress;
+			xTotalRegionSize -= ulAddress - ( size_t ) pxHeapRegion->pucStartAddress;
 		}
 
-		pucAlignedHeap = ( uint8_t * ) ulAddress;
+		pucAlignedHeap = ( uint8_t * ) (void*) ulAddress;
 
 		/* Set xStart if it has not already been set. */
 		if( xDefinedRegions == 0 )
@@ -553,7 +553,7 @@ const HeapRegion_t *pxHeapRegion;
 			configASSERT( pxEnd != NULL );
 
 			/* Check blocks are passed in with increasing start addresses. */
-			configASSERT( ulAddress > ( uint32_t ) pxEnd );
+			configASSERT( ulAddress > ( size_t ) pxEnd );
 		}
 
 		/* Remember the location of the end marker in the previous region, if
@@ -562,7 +562,7 @@ const HeapRegion_t *pxHeapRegion;
 
 		/* pxEnd is used to mark the end of the list of free blocks and is
 		inserted at the end of the region space. */
-		ulAddress = ( ( uint32_t ) pucAlignedHeap ) + xTotalRegionSize;
+		ulAddress = ( ( size_t ) pucAlignedHeap ) + xTotalRegionSize;
 		ulAddress -= heapSTRUCT_SIZE;
 		ulAddress &= ~portBYTE_ALIGNMENT_MASK;
 		pxEnd = ( BlockLink_t * ) ulAddress;
@@ -573,7 +573,7 @@ const HeapRegion_t *pxHeapRegion;
 		sized to take up the entire heap region minus the space taken by the
 		free block structure. */
 		pxFirstFreeBlockInRegion = ( BlockLink_t * ) pucAlignedHeap;
-		pxFirstFreeBlockInRegion->xBlockSize = ulAddress - ( uint32_t ) pxFirstFreeBlockInRegion;
+		pxFirstFreeBlockInRegion->xBlockSize = ulAddress - ( size_t ) pxFirstFreeBlockInRegion;
 		pxFirstFreeBlockInRegion->pxNextFreeBlock = pxEnd;
 
 		/* If this is not the first region that makes up the entire heap space
