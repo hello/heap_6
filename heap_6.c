@@ -99,11 +99,6 @@ task.h is included from an application file. */
 /* Allocate the memory for the heap. */
 #include "heap_regions.h"
 
-typedef struct HeapRegion
-{
-	uint8_t *pucStartAddress; // << Start address of a block of memory that will be part of the heap.
-	size_t xSizeInBytes;	 // << Size of the block of memory.
-} HeapRegion_t;
 
 /* Define the linked list structure.  This is used to link free blocks in order
 of their memory address. */
